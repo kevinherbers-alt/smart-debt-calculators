@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extra Payment Calculator - Time & Interest Saved | Smart Debt Calculators</title>
+<meta name="description" content="See how much time and interest an extra monthly payment saves on your loan or credit card. Free extra payment calculator with side-by-side payoff chart.">
+<link rel="canonical" href="https://smartdebtcalculators.com/extra-payment-calculator.html">
+<link rel="stylesheet" href="styles.css">
+<!-- AdSense verification/ad code goes here -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a class="site-name" href="/">Smart<span>Debt</span>Calculators</a>
+    <nav>
+      <a href="/">Payoff vs. Invest</a>
+      <a href="debt-snowball-calculator.html">Snowball vs. Avalanche</a>
+      <a href="debt-payoff-calculator.html">Debt Payoff</a>
+      <a href="extra-payment-calculator.html" class="active">Extra Payments</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="eyebrow">Accelerated Payoff</div>
+  <h1>Extra Payment Calculator</h1>
+  <p class="intro">How much difference does an extra $50, $100, or $500 a month actually make? Enter your debt and an extra amount to see the time and interest you'd save.</p>
+
+  <div class="card">
+    <div class="grid">
+      <div><label for="balance">Debt balance ($)</label><input type="number" id="balance" value="15000" min="0" step="100"></div>
+      <div><label for="rate">Interest rate (% APR)</label><input type="number" id="rate" value="9" min="0" step="0.1"></div>
+      <div><label for="payment">Current monthly payment ($)</label><input type="number" id="payment" value="300" min="1" step="10"></div>
+      <div><label for="extra">Extra payment per month ($)</label><input type="number" id="extra" value="100" min="0" step="25"></div>
+    </div>
+    <button class="primary" onclick="calc()">Calculate Savings</button>
+  </div>
+
+  <div class="results" id="results">
+    <div class="big-answer">
+      <div class="label">Interest saved</div>
+      <div class="value" id="saved"></div>
+      <div id="timeSaved" style="margin-top:4px;color:var(--muted);font-size:.9rem"></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="label">Payoff without extra</div><div class="value" id="dateBase"></div></div>
+      <div class="stat"><div class="label">Payoff with extra</div><div class="value" id="dateExtra"></div></div>
+      <div class="stat"><div class="label">Interest without extra</div><div class="value" id="intBase"></div></div>
+      <div class="stat"><div class="label">Interest with extra</div><div class="value" id="intExtra"></div></div>
+    </div>
+    <div class="card">
+      <div class="chart-wrap"><canvas id="chart"></canvas></div>
+      <div class="share-row">
+        <button class="ghost" onclick="copyLink()">Copy link to these results</button>
+        <span class="share-msg" id="shareMsg">Link copied</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="explain">
+    <h2>Why extra payments punch above their weight</h2>
+    <p>Every extra dollar goes straight at the principal, and interest is charged on the principal. So an extra payment doesn't just shrink the balance once — it shrinks every future month's interest charge too. That compounding-in-reverse is why relatively small extra payments can shave years off a loan, especially at high interest rates.</p>
+    <h2>Where should the extra money come from?</h2>
+    <p>Before committing extra money to debt, it's worth confirming that's the best use of it. If your rate is low, investing may come out ahead over the long run — our <a href="/">payoff vs. invest calculator</a> compares both paths directly. And if you have multiple debts, our <a href="debt-snowball-calculator.html">snowball vs. avalanche calculator</a> will tell you which debt the extra money should target first.</p>
+  </section>
+
+  <p class="disclaimer">This tool is for educational purposes only and is not financial advice. Results are estimates based on the assumptions you enter and assume no prepayment penalties. Consult a qualified financial professional before making financial decisions.</p>
+</main>
+<footer>
+  <div class="footer-inner">
+    <div>&copy; 2026 SmartDebtCalculators.com &middot; A <a href="https://swrltools.com">Swrl Tools</a> site</div>
+    <div><a href="about.html">About</a> &middot; <a href="contact.html">Contact</a></div>
+  </div>
+</footer>
+<script>
+let chart=null;
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.round(n).toLocaleString();
+const P={balance:'b',rate:'r',payment:'p',extra:'x'};
+function run(bal,apr,pay){
+  let debt=bal,months=0,interest=0,series=[debt];
+  if(bal*apr>=pay)return null;
+  while(debt>0&&months<1200){
+    months++;const i=debt*apr;interest+=i;debt+=i;
+    debt-=Math.min(pay,debt);series.push(debt);
+  }
+  return{months,interest,series};
+}
+function monthLabel(m){const d=new Date();d.setMonth(d.getMonth()+m);return d.toLocaleDateString(undefined,{month:'short',year:'numeric'});}
+function calc(pushUrl=true){
+  const bal=+$('balance').value,apr=+$('rate').value/100/12,pay=+$('payment').value,extra=+$('extra').value;
+  const base=run(bal,apr,pay);
+  if(!base)return alert('The current payment does not cover monthly interest — the balance would never shrink.');
+  const acc=run(bal,apr,pay+extra);
+  const saved=base.interest-acc.interest,mSaved=base.months-acc.months;
+  $('saved').textContent=fmt(saved);
+  $('timeSaved').textContent='Debt-free '+Math.floor(mSaved/12)+' year(s) and '+mSaved%12+' month(s) sooner with an extra '+fmt(extra)+'/month.';
+  $('dateBase').textContent=monthLabel(base.months);
+  $('dateExtra').textContent=monthLabel(acc.months);
+  $('intBase').textContent=fmt(base.interest);
+  $('intExtra').textContent=fmt(acc.interest);
+  $('results').classList.add('show');
+  const step=Math.max(1,Math.floor(base.series.length/60));
+  const l=[],b=[],e=[];
+  for(let i=0;i<base.series.length;i+=step){
+    l.push('Mo '+i);b.push(base.series[i]);e.push(acc.series[i]!==undefined?acc.series[i]:0);
+  }
+  if(chart)chart.destroy();
+  chart=new Chart($('chart'),{type:'line',data:{labels:l,datasets:[
+    {label:'Current payment',data:b,borderColor:'#8a93a3',tension:.2},
+    {label:'With extra payment',data:e,borderColor:'#2f5fd0',backgroundColor:'rgba(47,95,208,.08)',fill:true,tension:.2}
+  ]},options:{maintainAspectRatio:false,scales:{y:{ticks:{callback:v=>'$'+(v/1000)+'k'}}}}});
+  if(pushUrl){
+    const q=new URLSearchParams();
+    for(const[id,k]of Object.entries(P))q.set(k,$(id).value);
+    history.replaceState(null,'','?'+q.toString());
+  }
+}
+function copyLink(){
+  navigator.clipboard.writeText(location.href).then(()=>{
+    $('shareMsg').style.display='inline';
+    setTimeout(()=>$('shareMsg').style.display='none',2000);
+  });
+}
+(function(){
+  const q=new URLSearchParams(location.search);let any=false;
+  for(const[id,k]of Object.entries(P))if(q.has(k)){$(id).value=q.get(k);any=true;}
+  if(any)calc(false);
+})();
+</script>
+</body>
+</html>

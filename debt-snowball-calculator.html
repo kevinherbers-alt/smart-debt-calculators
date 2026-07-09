@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debt Snowball vs. Avalanche Calculator | Smart Debt Calculators</title>
+<meta name="description" content="Free debt snowball calculator that also runs the avalanche method side by side. See your debt-free date, total interest, and which payoff order wins for your debts.">
+<link rel="canonical" href="https://smartdebtcalculators.com/debt-snowball-calculator.html">
+<link rel="stylesheet" href="styles.css">
+<!-- AdSense verification/ad code goes here -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a class="site-name" href="/">Smart<span>Debt</span>Calculators</a>
+    <nav>
+      <a href="/">Payoff vs. Invest</a>
+      <a href="debt-snowball-calculator.html" class="active">Snowball vs. Avalanche</a>
+      <a href="debt-payoff-calculator.html">Debt Payoff</a>
+      <a href="extra-payment-calculator.html">Extra Payments</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="eyebrow">Payoff Strategy</div>
+  <h1>Debt Snowball vs. Avalanche Calculator</h1>
+  <p class="intro">Enter each of your debts and your total monthly debt budget. We'll run both payoff strategies — snowball (smallest balance first) and avalanche (highest rate first) — and show you the payoff date, total interest, and the difference between them.</p>
+
+  <div class="card">
+    <div id="debts"></div>
+    <button class="ghost" onclick="addDebt()">+ Add another debt</button>
+    <div class="grid" style="margin-top:18px">
+      <div><label for="budget">Total monthly debt budget ($)</label><input type="number" id="budget" value="800" min="1" step="25"></div>
+    </div>
+    <button class="primary" onclick="calc()">Compare Strategies</button>
+  </div>
+
+  <div class="results" id="results">
+    <div class="big-answer">
+      <div class="label">Interest saved by avalanche</div>
+      <div class="value" id="savings"></div>
+      <div id="detail" style="margin-top:4px;color:var(--muted);font-size:.9rem"></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="label">Snowball debt-free date</div><div class="value" id="snowDate"></div></div>
+      <div class="stat"><div class="label">Snowball total interest</div><div class="value" id="snowInt"></div></div>
+      <div class="stat"><div class="label">Avalanche debt-free date</div><div class="value" id="avaDate"></div></div>
+      <div class="stat"><div class="label">Avalanche total interest</div><div class="value" id="avaInt"></div></div>
+    </div>
+    <div class="card">
+      <div class="chart-wrap"><canvas id="chart"></canvas></div>
+      <h2 style="margin-top:10px">Payoff order</h2>
+      <div class="stat-row">
+        <div class="stat"><div class="label">Snowball order</div><div class="value" id="snowOrder" style="font-size:.95rem"></div></div>
+        <div class="stat"><div class="label">Avalanche order</div><div class="value" id="avaOrder" style="font-size:.95rem"></div></div>
+      </div>
+      <div class="share-row">
+        <button class="ghost" onclick="copyLink()">Copy link to these results</button>
+        <span class="share-msg" id="shareMsg">Link copied</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="explain">
+    <h2>Snowball vs. avalanche: what's the difference?</h2>
+    <p>Both methods have you pay minimums on every debt, then throw everything left in your budget at one "target" debt. When the target is paid off, its payment rolls into the next target — the payment "snowballs."</p>
+    <ul>
+      <li><strong>Snowball</strong> targets the smallest balance first. You get quick wins early, which is powerful motivation, but you may pay more interest overall.</li>
+      <li><strong>Avalanche</strong> targets the highest interest rate first. It is mathematically optimal — the least total interest and often the earliest payoff date.</li>
+    </ul>
+    <p>The best method is the one you'll stick with. If the avalanche only saves you a small amount, the motivational boost of the snowball may be worth it. If it saves thousands, that's worth knowing before you choose.</p>
+    <p>Only have one debt? Use our simpler <a href="debt-payoff-calculator.html">debt payoff calculator</a>, or see whether investing beats extra payments with the <a href="/">payoff vs. invest calculator</a>.</p>
+  </section>
+
+  <p class="disclaimer">This tool is for educational purposes only and is not financial advice. Results are estimates based on the assumptions you enter. Consult a qualified financial professional before making financial decisions.</p>
+</main>
+<footer>
+  <div class="footer-inner">
+    <div>&copy; 2026 SmartDebtCalculators.com &middot; A <a href="https://swrltools.com">Swrl Tools</a> site</div>
+    <div><a href="about.html">About</a> &middot; <a href="contact.html">Contact</a></div>
+  </div>
+</footer>
+<script>
+let chart=null,rowId=0;
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.round(n).toLocaleString();
+function addDebt(name='',bal='',rate='',min=''){
+  rowId++;
+  const div=document.createElement('div');
+  div.className='debt-row';div.id='row'+rowId;
+  div.innerHTML=
+    '<div><label>Debt name</label><input type="text" class="d-name" value="'+name+'" placeholder="Credit card"></div>'+
+    '<div><label>Balance ($)</label><input type="number" class="d-bal" value="'+bal+'" min="0" step="50"></div>'+
+    '<div><label>Rate (% APR)</label><input type="number" class="d-rate" value="'+rate+'" min="0" step="0.1"></div>'+
+    '<div><label>Min payment ($)</label><input type="number" class="d-min" value="'+min+'" min="1" step="5"></div>'+
+    '<button class="remove-btn" onclick="this.parentElement.remove()" aria-label="Remove debt">&times;</button>';
+  $('debts').appendChild(div);
+}
+function getDebts(){
+  return[...document.querySelectorAll('.debt-row')].map(r=>({
+    name:r.querySelector('.d-name').value||'Debt',
+    bal:+r.querySelector('.d-bal').value,
+    rate:+r.querySelector('.d-rate').value,
+    min:+r.querySelector('.d-min').value
+  })).filter(d=>d.bal>0);
+}
+function simulate(debts,budget,mode){
+  let ds=debts.map(d=>({...d})),month=0,totalInt=0,series=[],order=[];
+  const maxMonths=1200;
+  while(ds.some(d=>d.bal>0)&&month<maxMonths){
+    month++;
+    let active=ds.filter(d=>d.bal>0);
+    active.sort(mode==='snow'?(a,b)=>a.bal-b.bal:(a,b)=>b.rate-a.rate);
+    let mins=active.reduce((s,d)=>s+Math.min(d.min,d.bal),0);
+    let extra=Math.max(0,budget-mins);
+    for(const d of active){
+      const i=d.bal*d.rate/100/12;totalInt+=i;d.bal+=i;
+      let pay=Math.min(d.min,d.bal);
+      if(d===active[0])pay=Math.min(d.bal,pay+extra);
+      d.bal-=pay;
+      if(d.bal<=0.005){d.bal=0;if(!order.includes(d.name))order.push(d.name);}
+    }
+    if(month%3===0||!ds.some(d=>d.bal>0))series.push({m:month,t:ds.reduce((s,d)=>s+d.bal,0)});
+  }
+  return{months:month,totalInt,series,order,failed:month>=maxMonths};
+}
+function monthLabel(m){const d=new Date();d.setMonth(d.getMonth()+m);return d.toLocaleDateString(undefined,{month:'short',year:'numeric'});}
+function calc(pushUrl=true){
+  const debts=getDebts(),budget=+$('budget').value;
+  if(!debts.length)return alert('Add at least one debt.');
+  const minSum=debts.reduce((s,d)=>s+d.min,0);
+  if(budget<minSum)return alert('Your budget ($'+budget+') is less than the total minimum payments ($'+minSum+').');
+  const s=simulate(debts,budget,'snow'),a=simulate(debts,budget,'ava');
+  if(s.failed||a.failed)return alert('These payments never pay off the debt — interest outpaces payments. Increase your budget.');
+  $('savings').textContent=fmt(Math.max(0,s.totalInt-a.totalInt));
+  $('detail').textContent=s.months===a.months?'Both strategies finish the same month.':'Avalanche finishes '+(s.months-a.months)+' month(s) '+(s.months>a.months?'sooner':'later')+' than snowball for your debts.';
+  $('snowDate').textContent=monthLabel(s.months);
+  $('snowInt').textContent=fmt(s.totalInt);
+  $('avaDate').textContent=monthLabel(a.months);
+  $('avaInt').textContent=fmt(a.totalInt);
+  $('snowOrder').textContent=s.order.join(' → ');
+  $('avaOrder').textContent=a.order.join(' → ');
+  $('results').classList.add('show');
+  const labels=s.series.length>=a.series.length?s.series.map(p=>'Mo '+p.m):a.series.map(p=>'Mo '+p.m);
+  if(chart)chart.destroy();
+  chart=new Chart($('chart'),{type:'line',data:{labels,datasets:[
+    {label:'Snowball balance',data:s.series.map(p=>p.t),borderColor:'#2f5fd0',tension:.2},
+    {label:'Avalanche balance',data:a.series.map(p=>p.t),borderColor:'#d08a2f',tension:.2}
+  ]},options:{maintainAspectRatio:false,scales:{y:{ticks:{callback:v=>'$'+(v/1000)+'k'}}}}});
+  if(pushUrl){
+    const d=debts.map(x=>[encodeURIComponent(x.name),x.bal,x.rate,x.min].join(',')).join(';');
+    history.replaceState(null,'','?d='+d+'&bud='+budget);
+  }
+}
+function copyLink(){
+  navigator.clipboard.writeText(location.href).then(()=>{
+    $('shareMsg').style.display='inline';
+    setTimeout(()=>$('shareMsg').style.display='none',2000);
+  });
+}
+(function(){
+  const q=new URLSearchParams(location.search);
+  if(q.has('d')){
+    q.get('d').split(';').forEach(s=>{
+      const[p0,p1,p2,p3]=s.split(',');
+      addDebt(decodeURIComponent(p0||''),p1||'',p2||'',p3||'');
+    });
+    if(q.has('bud'))$('budget').value=q.get('bud');
+    calc(false);
+  }else{
+    addDebt('Credit card',6000,22,120);
+    addDebt('Car loan',12000,6.5,275);
+    addDebt('Student loan',18000,5,190);
+  }
+})();
+</script>
+</body>
+</html>
